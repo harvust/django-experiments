@@ -2,6 +2,7 @@ from __future__ import absolute_import
 
 from django import template
 from django.urls import reverse
+from django.conf import settings
 
 from experiments.utils import participant
 from experiments.manager import experiment_manager
@@ -32,6 +33,8 @@ class ExperimentNode(template.Node):
         self.user_variable = user_variable
 
     def render(self, context):
+        if getattr(settings, 'COMPRESS_OFFLINE', False):
+            return ""
         experiment = experiment_manager.get_experiment(self.experiment_name)
         if experiment:
             experiment.ensure_alternative_exists(self.alternative, self.weight)
