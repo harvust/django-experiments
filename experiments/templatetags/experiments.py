@@ -2,7 +2,7 @@ from __future__ import absolute_import
 
 from django import template
 from django.urls import reverse
-from django.conf import settings
+from django.db.utils import ProgrammingError
 
 from experiments.utils import participant
 from experiments.manager import experiment_manager
@@ -33,26 +33,26 @@ class ExperimentNode(template.Node):
         self.user_variable = user_variable
 
     def render(self, context):
-        if getattr(settings, 'COMPRESS_OFFLINE', False):
-            return ""
-        experiment = experiment_manager.get_experiment(self.experiment_name)
-        if experiment:
-            experiment.ensure_alternative_exists(self.alternative, self.weight)
+        try:
+            experiment = experiment_manager.get_experiment(self.experiment_name)
+            if experiment:
+                experiment.ensure_alternative_exists(self.alternative, self.weight)
 
-        # Get User object
-        if self.user_variable:
-            auth_user = self.user_variable.resolve(context)
-            user = participant(user=auth_user)
-        else:
-            request = context.get('request', None)
-            user = participant(request)
+            # Get User object
+            if self.user_variable:
+                auth_user = self.user_variable.resolve(context)
+                user = participant(user=auth_user)
+            else:
+                request = context.get('request', None)
+                user = participant(request)
 
-        # Should we render?
-        if user.is_enrolled(self.experiment_name, self.alternative):
-            response = self.node_list.render(context)
-        else:
+            # Should we render?
+            if user.is_enrolled(self.experiment_name, self.alternative):
+                response = self.node_list.render(context)
+            else:
+                response = ""
+        except ProgrammingError:
             response = ""
-
         return response
 
 
